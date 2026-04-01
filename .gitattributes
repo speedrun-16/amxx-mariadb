@@ -1,0 +1,12 @@
+# normalize all text files to LF in the repository
+# this prevents CRLF noise on Windows checkouts
+* text=auto eol=lf
+
+# treat compiled/binary artifacts as binary so git never touches line endings
+*.dll  binary
+*.so   binary
+*.exe  binary
+*.obj  binary
+*.lib  binary
+*.a    binary
+*.amxx binary

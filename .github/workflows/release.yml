@@ -1,0 +1,212 @@
+name: Release AMXX MariaDB Module
+
+on:
+  push:
+    tags: [ "*" ]
+
+jobs:
+  build-windows:
+    name: Build for Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Add MSVC to PATH
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      - name: Configure CMake
+        run: cmake -S . -B build -A Win32
+
+      - name: Build with CMake
+        run: cmake --build build --config Release
+
+      - name: Package artifacts
+        shell: powershell
+        run: |
+          $packageDir = "package"
+          New-Item -ItemType Directory -Force -Path "$packageDir/addons/amxmodx/modules"
+          New-Item -ItemType Directory -Force -Path "$packageDir/addons/amxmodx/scripting/include"
+          New-Item -ItemType Directory -Force -Path "$packageDir/addons/amxmodx/scripting/testsuite"
+
+          $dll = Get-ChildItem -Path "build" -Filter "mariadb_amxx.dll" -Recurse | Select-Object -First 1
+          if (-not $dll) { throw "mariadb_amxx.dll not found under build/" }
+          Copy-Item $dll.FullName -Destination "$packageDir/addons/amxmodx/modules/"
+          Copy-Item "src/pawn/include/mariadb.inc" -Destination "$packageDir/addons/amxmodx/scripting/include/"
+          Copy-Item "src/pawn/testsuite/mariadb_test.sma" -Destination "$packageDir/addons/amxmodx/scripting/testsuite/"
+          Copy-Item "src/pawn/testsuite/mariadb_sqlx_compare.sma" -Destination "$packageDir/addons/amxmodx/scripting/testsuite/"
+
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb-module-windows
+          path: package/
+
+  build-linux:
+    name: Build for Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build inside Ubuntu 14.04 container for compatibility
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ubuntu:14.04
+          options: -v ${{ github.workspace }}:/work
+          run: |
+            set -e
+
+            # Phase 1: install a modern GCC
+            dpkg --add-architecture i386
+            apt-get update
+            apt-get install -y --no-install-recommends software-properties-common ca-certificates wget
+            add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            apt-get update
+
+            apt-get install -y --no-install-recommends \
+              build-essential \
+              gcc-9 \
+              g++-9 \
+              g++-9-multilib \
+              linux-libc-dev:i386 \
+              git \
+              file \
+              perl
+
+            update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+            gcc --version
+
+            # Phase 2: install CMake
+            CMAKE_VERSION="3.21.7"
+            CMAKE_DIST="cmake-${CMAKE_VERSION}-linux-x86_64"
+            wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/${CMAKE_DIST}.tar.gz
+            tar -xzf ${CMAKE_DIST}.tar.gz
+            cp -r ${CMAKE_DIST}/bin/* /usr/local/bin/
+            cp -r ${CMAKE_DIST}/share/* /usr/local/share/
+            rm -rf ${CMAKE_DIST} ${CMAKE_DIST}.tar.gz
+            cmake --version
+
+            # Phase 3: build static OpenSSL 1.0.2u for i386
+            # Ubuntu 14.04 ships OpenSSL 1.0.1 which lacks ASN1_TIME_diff (added in 1.0.2).
+            # We compile our own and link statically so the module has no libssl runtime dep.
+            OPENSSL_VERSION="1.0.2u"
+            OPENSSL_PREFIX="/opt/openssl-i386"
+            wget -q https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
+            tar -xzf openssl-${OPENSSL_VERSION}.tar.gz
+            cd openssl-${OPENSSL_VERSION}
+            CC="gcc -m32" ./Configure linux-generic32 no-shared -fPIC \
+                --prefix=${OPENSSL_PREFIX} \
+                -I/usr/include/i386-linux-gnu
+            make -j$(nproc) build_libs
+            mkdir -p ${OPENSSL_PREFIX}/lib ${OPENSSL_PREFIX}/include
+            cp libssl.a libcrypto.a ${OPENSSL_PREFIX}/lib/
+            # OpenSSL 1.0.2's include/openssl tree contains symlinks into the
+            # source tree. Dereference them while copying or they break once the
+            # extracted sources are removed.
+            cp -RL include/openssl ${OPENSSL_PREFIX}/include/
+            test -f ${OPENSSL_PREFIX}/include/openssl/evp.h
+            cd ..
+            rm -rf openssl-${OPENSSL_VERSION} openssl-${OPENSSL_VERSION}.tar.gz
+
+            # Phase 4: build
+            cd /work
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+                -DOPENSSL_ROOT_DIR=${OPENSSL_PREFIX} \
+                -DOPENSSL_SSL_LIBRARY=${OPENSSL_PREFIX}/lib/libssl.a \
+                -DOPENSSL_CRYPTO_LIBRARY=${OPENSSL_PREFIX}/lib/libcrypto.a \
+                -DOPENSSL_INCLUDE_DIR=${OPENSSL_PREFIX}/include
+            cmake --build build --target mariadb_amxx
+            file build/addons/amxmodx/modules/mariadb_amxx_i386.so
+
+      - name: Package artifacts
+        run: |
+          PACKAGE_DIR="package"
+          mkdir -p $PACKAGE_DIR/addons/amxmodx/modules
+          mkdir -p $PACKAGE_DIR/addons/amxmodx/scripting/include
+          mkdir -p $PACKAGE_DIR/addons/amxmodx/scripting/testsuite
+
+          cp "build/addons/amxmodx/modules/mariadb_amxx_i386.so" "$PACKAGE_DIR/addons/amxmodx/modules/"
+          cp "src/pawn/include/mariadb.inc" "$PACKAGE_DIR/addons/amxmodx/scripting/include/"
+          cp "src/pawn/testsuite/mariadb_test.sma" "$PACKAGE_DIR/addons/amxmodx/scripting/testsuite/"
+          cp "src/pawn/testsuite/mariadb_sqlx_compare.sma" "$PACKAGE_DIR/addons/amxmodx/scripting/testsuite/"
+
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb-module-linux
+          path: package/
+
+  compile-scripts:
+    name: Compile Pawn scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup AMXXPawn compiler
+        uses: speedrun-16/setup-amxx@main
+        with:
+          amxx-branch: '1.10'
+          build: 'latest'
+
+      - name: Compile Pawn scripts
+        run: |
+          mkdir -p out
+          amxxpc src/pawn/testsuite/mariadb_test.sma \
+            -i"src/pawn/include" \
+            -oout/mariadb_test.amxx
+          amxxpc src/pawn/testsuite/mariadb_sqlx_compare.sma \
+            -i"src/pawn/include" \
+            -oout/mariadb_sqlx_compare.amxx
+
+      - name: Upload scripts artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb-scripts
+          path: out/
+
+  release:
+    name: Publish release
+    needs: [build-windows, build-linux, compile-scripts]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mariadb-module-windows
+          path: package/
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mariadb-module-linux
+          path: package/
+
+      - name: Download scripts artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mariadb-scripts
+          path: package/addons/amxmodx/plugins/
+
+      - name: Create release archive
+        run: |
+          cd package
+          zip -r ../amxx-mariadb-${{ github.ref_name }}.zip .
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: amxx-mariadb-${{ github.ref_name }}.zip
