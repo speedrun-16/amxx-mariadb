@@ -1,6 +1,6 @@
 # amxx-mariadb
 
-![Author](https://img.shields.io/badge/Author-PWNED-8cf?style=for-the-badge "Author") ![Version](https://img.shields.io/badge/Version-1.0-blue?style=for-the-badge "Version")
+![Author](https://img.shields.io/badge/Author-PWNED-8cf?style=for-the-badge "Author") ![Version](https://img.shields.io/badge/Version-1.1.0-blue?style=for-the-badge "Version")
 
 Native MariaDB/MySQL driver module for [AMX Mod X](https://www.amxmodx.org/). \
 An alternative to the legacy SQLX driver, built on [MariaDB Connector/C 3.4.8](https://github.com/mariadb-corporation/mariadb-connector-c).

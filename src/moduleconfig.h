@@ -2,7 +2,7 @@
 #define __MODULECONFIG_H__
 
 #define MODULE_NAME    "AMXX MariaDB"
-#define MODULE_VERSION "1.0.0"
+#define MODULE_VERSION "1.1.0"
 #define MODULE_AUTHOR  "PWNED"
 #define MODULE_URL     "https://github.com/speedrun-org/amxx-mariadb"
 #define MODULE_LOGTAG  "MariaDB"

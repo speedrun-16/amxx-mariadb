@@ -5,7 +5,7 @@
 #include <amxmisc>
 
 #define PLUGIN  "MariaDB Driver Test Suite"
-#define VERSION "1.0"
+#define VERSION "1.1.0"
 #define AUTHOR  "PWNED"
 
 #include <mariadb>

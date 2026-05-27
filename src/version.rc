@@ -1,8 +1,8 @@
 #include <winresrc.h>
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,0
- PRODUCTVERSION 1,0,0,0
+ FILEVERSION 1,1,0,0
+ PRODUCTVERSION 1,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -19,11 +19,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "speedrun-16\0"
             VALUE "FileDescription", "AMXX MariaDB Module\0"
-            VALUE "FileVersion", "1.0.0\0"
+            VALUE "FileVersion", "1.1.0\0"
             VALUE "InternalName", "mariadb\0"
             VALUE "OriginalFilename", "mariadb_amxx.dll\0"
             VALUE "ProductName", "AMXX MariaDB\0"
-            VALUE "ProductVersion", "1.0.0\0"
+            VALUE "ProductVersion", "1.1.0\0"
         END
     END
     BLOCK "VarFileInfo"

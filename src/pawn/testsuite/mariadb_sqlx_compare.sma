@@ -5,7 +5,7 @@
 #include <amxmisc>
 
 #define PLUGIN  "MariaDB vs SQLX Compare"
-#define VERSION "1.0"
+#define VERSION "1.1.0"
 #define AUTHOR  "PWNED"
 
 #include <mariadb>
@@ -1449,4 +1449,3 @@ stock log_stmt_error(mariadb_statement:stmt, const context[])
 	error_code = mariadb_stmt_error_code(stmt);
 	log_compare_important("%s: %s (%d)", context, error, error_code);
 }
-
