@@ -39,8 +39,10 @@ jobs:
           if (-not $dll) { throw "mariadb_amxx.dll not found under build/" }
           Copy-Item $dll.FullName -Destination "$packageDir/addons/amxmodx/modules/"
           Copy-Item "src/pawn/include/mariadb.inc" -Destination "$packageDir/addons/amxmodx/scripting/include/"
+          Copy-Item "src/pawn/include/mariadb_dsn.inc" -Destination "$packageDir/addons/amxmodx/scripting/include/"
           Copy-Item "src/pawn/testsuite/mariadb_test.sma" -Destination "$packageDir/addons/amxmodx/scripting/testsuite/"
           Copy-Item "src/pawn/testsuite/mariadb_sqlx_compare.sma" -Destination "$packageDir/addons/amxmodx/scripting/testsuite/"
+          Copy-Item "src/pawn/testsuite/mariadb_dsn_test.sma" -Destination "$packageDir/addons/amxmodx/scripting/testsuite/"
 
 
       - name: Upload Windows artifact
@@ -136,8 +138,10 @@ jobs:
 
           cp "build/addons/amxmodx/modules/mariadb_amxx_i386.so" "$PACKAGE_DIR/addons/amxmodx/modules/"
           cp "src/pawn/include/mariadb.inc" "$PACKAGE_DIR/addons/amxmodx/scripting/include/"
+          cp "src/pawn/include/mariadb_dsn.inc" "$PACKAGE_DIR/addons/amxmodx/scripting/include/"
           cp "src/pawn/testsuite/mariadb_test.sma" "$PACKAGE_DIR/addons/amxmodx/scripting/testsuite/"
           cp "src/pawn/testsuite/mariadb_sqlx_compare.sma" "$PACKAGE_DIR/addons/amxmodx/scripting/testsuite/"
+          cp "src/pawn/testsuite/mariadb_dsn_test.sma" "$PACKAGE_DIR/addons/amxmodx/scripting/testsuite/"
 
 
       - name: Upload Linux artifact
@@ -157,8 +161,7 @@ jobs:
       - name: Setup AMXXPawn compiler
         uses: speedrun-16/setup-amxx@main
         with:
-          amxx-branch: '1.10'
-          build: 'latest'
+          release-tag: 'latest'
 
       - name: Compile Pawn scripts
         run: |
@@ -169,6 +172,9 @@ jobs:
           amxxpc src/pawn/testsuite/mariadb_sqlx_compare.sma \
             -i"src/pawn/include" \
             -oout/mariadb_sqlx_compare.amxx
+          amxxpc src/pawn/testsuite/mariadb_dsn_test.sma \
+            -i"src/pawn/include" \
+            -oout/mariadb_dsn_test.amxx
 
       - name: Upload scripts artifact
         uses: actions/upload-artifact@v4
